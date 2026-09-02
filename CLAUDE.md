@@ -58,6 +58,11 @@ xcodebuild -project "cattura riunione.xcodeproj" -scheme "Cattura Riunione" \
 xcodebuild -project "cattura riunione.xcodeproj" -scheme "Cattura Riunione" \
   -configuration Release -destination 'platform=macOS,arch=arm64' \
   -derivedDataPath build ARCHS=arm64 build
+
+# archivio per la distribuzione: Product > Archive da Xcode NON può
+# funzionare (destinazione generica → pacchetti anche x86_64); lo script
+# archivia con ARCHS=arm64 e deposita l'archivio nell'Organizer.
+./scripts/crea-archivio.sh
 ```
 
 Il progetto deve sempre restare apribile e compilabile da Xcode: niente
