@@ -19,8 +19,10 @@ struct ContentView: View {
     @State private var riunioni: [Riunione] = []
     @State private var selezione: URL?
     @State private var cartellaInElaborazione: URL?
-    @State private var riunioneInRinomina: Riunione?
-    @State private var nuovoNomeRiunione = ""
+    /// Cartella della riunione in rinomina in linea (stile Finder).
+    @State private var rinominaInLinea: URL?
+    @State private var nomeInModifica = ""
+    @FocusState private var fuocoRinomina: URL?
     @State private var riunioneInEliminazione: Riunione?
 
     var body: some View {
@@ -54,27 +56,38 @@ struct ContentView: View {
             pannelloStato
             List(riunioni, selection: $selezione) { riunione in
                 VStack(alignment: .leading) {
-                    Text(riunione.nome)
+                    if rinominaInLinea == riunione.cartella {
+                        TextField("Nome", text: $nomeInModifica)
+                            .textFieldStyle(.roundedBorder)
+                            .focused($fuocoRinomina, equals: riunione.cartella)
+                            .onSubmit { confermaRinominaInLinea() }
+                            .onExitCommand { annullaRinominaInLinea() }
+                    } else {
+                        Text(riunione.nome)
+                    }
                     if !riunione.haTrascrizione {
                         Text("Da trascrivere").font(.caption).foregroundStyle(.orange)
                     }
                 }
                 .tag(riunione.cartella)
-                // simultaneousGesture: un normale onTapGesture ruberebbe
-                // il clic singolo alla selezione della lista.
-                .simultaneousGesture(TapGesture(count: 2).onEnded {
-                    nuovoNomeRiunione = riunione.nome
-                    riunioneInRinomina = riunione
-                })
+                // La selezione si gestisce a mano: come nel Finder, il
+                // clic su una riga già selezionata avvia la rinomina in
+                // linea (un gesto di doppio clic ruberebbe il clic
+                // singolo alla lista).
+                .contentShape(Rectangle())
+                .onTapGesture {
+                    if selezione == riunione.cartella, rinominaInLinea == nil {
+                        avviaRinomina(riunione)
+                    } else if rinominaInLinea != riunione.cartella {
+                        selezione = riunione.cartella
+                    }
+                }
                 .contextMenu {
                     Button(riunione.haTrascrizione ? "Trascrivi di nuovo" : "Trascrivi") {
                         Task { await trascrivi(cartella: riunione.cartella) }
                     }
                     .disabled(motore == nil || cartellaInElaborazione != nil)
-                    Button("Rinomina…") {
-                        nuovoNomeRiunione = riunione.nome
-                        riunioneInRinomina = riunione
-                    }
+                    Button("Rinomina") { avviaRinomina(riunione) }
                     Button("Esporta audio…") { esportaAudio(riunione) }
                     Button("Mostra nel Finder") {
                         NSWorkspace.shared.activateFileViewerSelecting([riunione.cartella])
@@ -85,6 +98,20 @@ struct ContentView: View {
             }
             .onDrop(of: [UTType.audio], isTargeted: nil) { fornitori in
                 importa(fornitori)
+            }
+            // Invio sulla riunione selezionata: rinomina, come nel Finder.
+            .onKeyPress(.return) {
+                guard rinominaInLinea == nil, let selezione,
+                      let riunione = riunioni.first(where: { $0.cartella == selezione })
+                else { return .ignored }
+                avviaRinomina(riunione)
+                return .handled
+            }
+            // Il clic fuori dal campo conferma la rinomina (perdita di fuoco).
+            .onChange(of: fuocoRinomina) {
+                if rinominaInLinea != nil, fuocoRinomina != rinominaInLinea {
+                    confermaRinominaInLinea()
+                }
             }
 
             HStack {
@@ -104,23 +131,12 @@ struct ContentView: View {
                 .padding(.bottom, 8)
         }
         .padding(.top, 8)
-        .alert("Rinomina riunione", isPresented: rinominaPresentata) {
-            TextField("Nome", text: $nuovoNomeRiunione)
-            Button("Annulla", role: .cancel) { riunioneInRinomina = nil }
-            Button("Rinomina") { confermaRinominaRiunione() }
-        }
         .alert("Eliminare la riunione?", isPresented: eliminazionePresentata) {
             Button("Annulla", role: .cancel) { riunioneInEliminazione = nil }
             Button("Sposta nel Cestino", role: .destructive) { confermaEliminaRiunione() }
         } message: {
             Text("«\(riunioneInEliminazione?.nome ?? "")» finisce nel Cestino con audio e verbale.")
         }
-    }
-
-    /// I due alert si presentano quando c'è una riunione in lavorazione.
-    private var rinominaPresentata: Binding<Bool> {
-        Binding(get: { riunioneInRinomina != nil },
-                set: { if !$0 { riunioneInRinomina = nil } })
     }
 
     private var eliminazionePresentata: Binding<Bool> {
@@ -290,16 +306,32 @@ struct ContentView: View {
 
     // MARK: Gestione delle riunioni
 
-    private func confermaRinominaRiunione() {
-        guard let riunione = riunioneInRinomina else { return }
-        riunioneInRinomina = nil
+    private func avviaRinomina(_ riunione: Riunione) {
+        nomeInModifica = riunione.nome
+        rinominaInLinea = riunione.cartella
+        // Il fuoco si assegna al giro successivo, quando il campo esiste.
+        Task { fuocoRinomina = riunione.cartella }
+    }
+
+    private func confermaRinominaInLinea() {
+        guard let cartella = rinominaInLinea else { return }
+        rinominaInLinea = nil
+        fuocoRinomina = nil
+        let nome = nomeInModifica.trimmingCharacters(in: .whitespacesAndNewlines)
+        // Campo svuotato = annulla, come il Finder che ripristina il nome.
+        guard !nome.isEmpty else { return }
         do {
-            let nuova = try MeetingStore.rinomina(cartella: riunione.cartella, in: nuovoNomeRiunione)
-            if selezione == riunione.cartella { selezione = nuova }
+            let nuova = try MeetingStore.rinomina(cartella: cartella, in: nome)
+            if selezione == cartella { selezione = nuova }
             aggiornaElenco()
         } catch {
             registratore.microfono.errorMessage = error.localizedDescription
         }
+    }
+
+    private func annullaRinominaInLinea() {
+        rinominaInLinea = nil
+        fuocoRinomina = nil
     }
 
     private func confermaEliminaRiunione() {
