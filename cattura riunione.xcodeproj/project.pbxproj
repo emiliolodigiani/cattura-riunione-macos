@@ -11,9 +11,22 @@
 		CA11000000000000000000B3 /* Cattura RiunioneTests.xctest */ = {isa = PBXFileReference; explicitFileType = wrapper.cfbundle; includeInIndex = 0; path = "Cattura RiunioneTests.xctest"; sourceTree = BUILT_PRODUCTS_DIR; };
 /* End PBXFileReference section */
 
+/* Begin PBXFileSystemSynchronizedBuildFileExceptionSet section */
+		CA11000000000000000000E1 /* Exceptions for "cattura riunione" folder in "Cattura Riunione" target */ = {
+			isa = PBXFileSystemSynchronizedBuildFileExceptionSet;
+			membershipExceptions = (
+				Info.plist,
+			);
+			target = CA11000000000000000000A4 /* Cattura Riunione */;
+		};
+/* End PBXFileSystemSynchronizedBuildFileExceptionSet section */
+
 /* Begin PBXFileSystemSynchronizedRootGroup section */
 		CA11000000000000000000A1 /* cattura riunione */ = {
 			isa = PBXFileSystemSynchronizedRootGroup;
+			exceptions = (
+				CA11000000000000000000E1 /* Exceptions for "cattura riunione" folder in "Cattura Riunione" target */,
+			);
 			path = "cattura riunione";
 			sourceTree = "<group>";
 		};
