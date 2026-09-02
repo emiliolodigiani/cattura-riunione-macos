@@ -8,6 +8,7 @@
 //  l'm4a d'archivio.
 //
 
+import Accelerate
 import AVFoundation
 
 nonisolated enum AudioCampioni {
@@ -38,11 +39,14 @@ nonisolated enum AudioCampioni {
         campioni.reserveCapacity(Int(Double(file.length) * frequenza / file.processingFormat.sampleRate) + 4096)
         let blocco = AVAudioFrameCount(8192)
         var finita = false
+        // Un solo buffer d'uscita riusato per tutta la conversione: su
+        // registrazioni lunghe le allocazioni per blocco pesano.
+        guard let uscita = AVAudioPCMBuffer(pcmFormat: destinazione, frameCapacity: blocco) else {
+            throw Errore.conversioneFallita
+        }
 
         while true {
-            guard let uscita = AVAudioPCMBuffer(pcmFormat: destinazione, frameCapacity: blocco) else {
-                throw Errore.conversioneFallita
-            }
+            uscita.frameLength = 0
             var erroreConversione: NSError?
             let stato = convertitore.convert(to: uscita, error: &erroreConversione) { richiesti, statoIngresso in
                 if finita {
@@ -84,19 +88,25 @@ nonisolated enum AudioCampioni {
     /// integrato) e all'ascolto risultano flebili.
     static func normalizza(_ campioni: [Float]) -> [Float] {
         let piccoDestinazione: Float = 0.891
-        let picco = campioni.reduce(Float(0)) { max($0, abs($1)) }
+        guard !campioni.isEmpty else { return campioni }
+        let picco = vDSP.maximumMagnitude(campioni)
         guard picco > 0.001, picco < piccoDestinazione else { return campioni }
-        let guadagno = piccoDestinazione / picco
-        return campioni.map { $0 * guadagno }
+        return vDSP.multiply(piccoDestinazione / picco, campioni)
     }
 
     /// Somma due tracce campione per campione (lunghezze diverse ammesse)
     /// con limitazione morbida del fondo scala.
     static func miscela(_ a: [Float], _ b: [Float]) -> [Float] {
         let (lunga, corta) = a.count >= b.count ? (a, b) : (b, a)
+        guard !corta.isEmpty else { return lunga }
         var esito = lunga
-        for i in corta.indices { esito[i] += corta[i] }
-        for i in esito.indices { esito[i] = max(-1, min(1, esito[i])) }
+        esito.withUnsafeMutableBufferPointer { somma in
+            corta.withUnsafeBufferPointer { addendo in
+                vDSP_vadd(somma.baseAddress!, 1, addendo.baseAddress!, 1,
+                          somma.baseAddress!, 1, vDSP_Length(corta.count))
+            }
+        }
+        vDSP.clip(esito, to: -1...1, result: &esito)
         return esito
     }
 

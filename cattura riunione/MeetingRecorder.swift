@@ -144,24 +144,35 @@ final class MeetingRecorder {
                 case let (nil, sistema?): mix = sistema
                 case (nil, nil): throw AudioCampioni.Errore.conversioneFallita
                 }
-                try AudioCampioni.scriviM4A(
-                    AudioCampioni.normalizza(mix), frequenza: 48000,
-                    in: cartella.appendingPathComponent(MeetingStore.nomeAudio)
-                )
 
-                // Con due tracce vere si salvano anche i singoli, ciascuno
-                // normalizzato: alimentano la diarizzazione separata. Una
-                // traccia senza campioni non è "vera": inutile ai modelli.
-                if let mic = campioniMic, let sistema = campioniSistema,
-                   !mic.isEmpty, !sistema.isEmpty {
-                    try AudioCampioni.scriviM4A(
-                        AudioCampioni.normalizza(mic), frequenza: 48000,
-                        in: cartella.appendingPathComponent(MeetingStore.nomeAudioMicrofono)
-                    )
-                    try AudioCampioni.scriviM4A(
-                        AudioCampioni.normalizza(sistema), frequenza: 48000,
-                        in: cartella.appendingPathComponent(MeetingStore.nomeAudioSistema)
-                    )
+                // Le codifiche AAC sono il grosso dell'attesa dopo lo
+                // stop: mix e tracce singole si scrivono in parallelo.
+                // Le tracce si salvano solo se entrambe "vere" (con
+                // campioni): alimentano la diarizzazione separata.
+                let mixNormalizzato = AudioCampioni.normalizza(mix)
+                try await withThrowingTaskGroup(of: Void.self) { gruppo in
+                    gruppo.addTask {
+                        try AudioCampioni.scriviM4A(
+                            mixNormalizzato, frequenza: 48000,
+                            in: cartella.appendingPathComponent(MeetingStore.nomeAudio)
+                        )
+                    }
+                    if let mic = campioniMic, let sistema = campioniSistema,
+                       !mic.isEmpty, !sistema.isEmpty {
+                        gruppo.addTask {
+                            try AudioCampioni.scriviM4A(
+                                AudioCampioni.normalizza(mic), frequenza: 48000,
+                                in: cartella.appendingPathComponent(MeetingStore.nomeAudioMicrofono)
+                            )
+                        }
+                        gruppo.addTask {
+                            try AudioCampioni.scriviM4A(
+                                AudioCampioni.normalizza(sistema), frequenza: 48000,
+                                in: cartella.appendingPathComponent(MeetingStore.nomeAudioSistema)
+                            )
+                        }
+                    }
+                    try await gruppo.waitForAll()
                 }
             }.value
             pulisci(urlMicrofono, urlSistema)

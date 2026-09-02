@@ -236,6 +236,13 @@ struct ContentView: View {
             }
             .padding(.horizontal, 12)
         }
+        if registratore.staMiscelando {
+            HStack(spacing: 6) {
+                ProgressView().controlSize(.small)
+                Text("Salvataggio della riunione…").font(.caption)
+            }
+            .padding(.horizontal, 12)
+        }
         if let nome = importazioneInCorso {
             HStack(spacing: 6) {
                 ProgressView().controlSize(.small)
