@@ -73,7 +73,9 @@ cattura brano.
 - **FluidAudio**: i modelli si scaricano da Hugging Face al primo uso
   (~1 GB); ogni percorso di codice deve reggere l'assenza dei modelli e
   l'assenza di rete.
-- I WAV intermedi (`microfono.wav`, `sistema.wav`, 16 kHz per i modelli)
-  stanno in una cartella temporanea e si eliminano a fine elaborazione;
-  nella cartella della riunione restano solo `riunione.m4a`,
-  `trascrizione.json`, `verbale.md`.
+- I file grezzi della registrazione (CAF temporanei) si eliminano a fine
+  elaborazione. Nella cartella della riunione restano `riunione.m4a`
+  (mix per riascolto/esportazione), `trascrizione.json`, `verbale.md` e,
+  per le registrazioni doppie (microfono + audio di sistema), anche
+  `microfono.m4a` e `sistema.m4a`: alimentano la diarizzazione separata
+  per traccia, molto più affidabile di quella sul mix.

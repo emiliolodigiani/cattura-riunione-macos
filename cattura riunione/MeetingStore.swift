@@ -21,6 +21,11 @@ nonisolated struct Riunione: Identifiable, Equatable {
 nonisolated enum MeetingStore {
 
     static let nomeAudio = "riunione.m4a"
+    /// Tracce separate di una registrazione doppia (mic + sistema): se
+    /// presenti, la trascrizione le diarizza per conto loro (separazione
+    /// dei parlanti molto più affidabile del mix).
+    static let nomeAudioMicrofono = "microfono.m4a"
+    static let nomeAudioSistema = "sistema.m4a"
     static let nomeTrascrizione = "trascrizione.json"
     static let nomeVerbale = "verbale.md"
 

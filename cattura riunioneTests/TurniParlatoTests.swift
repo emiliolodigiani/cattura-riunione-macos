@@ -53,4 +53,40 @@ final class TurniParlatoTests: XCTestCase {
     func testVuoto() {
         XCTAssertEqual(TurniParlato.consolida([]), [])
     }
+
+    // MARK: Doppia traccia (microfono + sistema)
+
+    func testUnisceLeDueTracceConPrefissiEOrdine() {
+        let mic = [TurnoParlato(idParlante: "S1", inizio: 4.0, fine: 8.0)]
+        let sistema = [TurnoParlato(idParlante: "S1", inizio: 0.0, fine: 3.0)]
+        let esito = TurniParlato.unisci(microfono: mic, sistema: sistema)
+        XCTAssertEqual(esito, [
+            TurnoParlato(idParlante: "sistema:S1", inizio: 0.0, fine: 3.0),
+            TurnoParlato(idParlante: "microfono:S1", inizio: 4.0, fine: 8.0),
+        ])
+    }
+
+    func testConsolidaOgniTracciaPerConto() {
+        // I due frammenti del microfono si uniscono anche se in mezzo,
+        // sull'altra traccia, qualcuno sta parlando.
+        let mic = [
+            TurnoParlato(idParlante: "S1", inizio: 0.0, fine: 3.0),
+            TurnoParlato(idParlante: "S1", inizio: 3.4, fine: 6.0),
+        ]
+        let sistema = [TurnoParlato(idParlante: "S1", inizio: 3.1, fine: 5.0)]
+        let esito = TurniParlato.unisci(microfono: mic, sistema: sistema)
+        XCTAssertEqual(esito, [
+            TurnoParlato(idParlante: "microfono:S1", inizio: 0.0, fine: 6.0),
+            TurnoParlato(idParlante: "sistema:S1", inizio: 3.1, fine: 5.0),
+        ])
+    }
+
+    func testTracceVuote() {
+        XCTAssertEqual(TurniParlato.unisci(microfono: [], sistema: []), [])
+        let mic = [TurnoParlato(idParlante: "S1", inizio: 0.0, fine: 2.0)]
+        XCTAssertEqual(
+            TurniParlato.unisci(microfono: mic, sistema: []),
+            [TurnoParlato(idParlante: "microfono:S1", inizio: 0.0, fine: 2.0)]
+        )
+    }
 }

@@ -7,12 +7,15 @@ scaricamento dei modelli (~1 GB da Hugging Face) non serve la rete.
 
 ## Come funziona
 
-1. **Registra**: microfono + (opzionale) audio di sistema via process
-   tap di Core Audio. Allo stop le due tracce vengono miscelate in
-   `riunione.m4a`.
+1. **Registra**: microfono e/o uscite del Mac (audio di sistema, via
+   process tap di Core Audio) — anche una sola delle due sorgenti. Allo
+   stop nasce il mix normalizzato `riunione.m4a`; con entrambe le
+   sorgenti restano anche le tracce separate `microfono.m4a` e
+   `sistema.m4a`.
 2. **Trascrive**: diarizzazione (chi parla e quando) e trascrizione
-   (Parakeet TDT v3, italiano incluso) con FluidAudio/Core ML, sul
-   Neural Engine.
+   (Parakeet TDT v3, italiano incluso) con FluidAudio/Core ML. Con le
+   tracce separate ogni traccia viene diarizzata per conto suo: chi
+   parla al microfono non si confonde mai con le voci della call.
 3. **Verbale**: interventi per parlante con orari; rinomina dei
    parlanti, riascolto sincronizzato, esportazione Markdown.
 

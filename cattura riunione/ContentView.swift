@@ -149,6 +149,9 @@ struct ContentView: View {
         // $registratore non attraversa proprietà non scrivibili.
         @Bindable var microfono = registratore.microfono
         return VStack(alignment: .leading, spacing: 8) {
+            Toggle("Registra il microfono", isOn: $registratore.registraMicrofono)
+                .disabled(registratore.isRecording)
+
             Picker("Ingresso", selection: $microfono.selectedDeviceID) {
                 ForEach(registratore.microfono.devices) { dispositivo in
                     Text(dispositivo.name).tag(Optional(dispositivo.id))
@@ -157,8 +160,13 @@ struct ContentView: View {
             .onChange(of: registratore.microfono.selectedDeviceID) {
                 registratore.microfono.noteDeviceChanged()
             }
+            .disabled(!registratore.registraMicrofono || registratore.isRecording)
 
-            Toggle("Registra anche l'audio di sistema (call)", isOn: $registratore.catturaSistema)
+            if registratore.registraMicrofono {
+                MisuratoreLivello(livelli: registratore.microfono.levels)
+            }
+
+            Toggle("Registra le uscite (audio di sistema)", isOn: $registratore.catturaSistema)
                 .disabled(registratore.isRecording)
 
             HStack {
@@ -169,7 +177,7 @@ struct ContentView: View {
                         Label("Ferma", systemImage: "stop.circle.fill")
                     }
                     .keyboardShortcut(.space, modifiers: [])
-                    Text(FormattaTempo.hhmmss(registratore.microfono.elapsed))
+                    Text(FormattaTempo.hhmmss(registratore.elapsed))
                         .monospacedDigit()
                 } else {
                     Button {
@@ -177,12 +185,16 @@ struct ContentView: View {
                     } label: {
                         Label("Registra", systemImage: "record.circle")
                     }
-                    .disabled(registratore.staMiscelando || cartellaInElaborazione != nil)
+                    .disabled(registratore.staMiscelando
+                              || cartellaInElaborazione != nil
+                              || (!registratore.registraMicrofono && !registratore.catturaSistema))
                 }
             }
 
-            MisuratoreLivello(livelli: registratore.microfono.levels)
-
+            if !registratore.registraMicrofono && !registratore.catturaSistema {
+                Text("Attiva almeno una sorgente da registrare.")
+                    .font(.caption).foregroundStyle(.secondary)
+            }
             if let avviso = registratore.avvisoSistema {
                 Text(avviso).font(.caption).foregroundStyle(.orange)
             }
@@ -250,8 +262,7 @@ struct ContentView: View {
         guard let motore else { return }
         cartellaInElaborazione = cartella
         defer { cartellaInElaborazione = nil }
-        let audio = cartella.appendingPathComponent(MeetingStore.nomeAudio)
-        if let trascrizione = await motore.trascrivi(audio: audio) {
+        if let trascrizione = await motore.trascrivi(riunione: cartella) {
             try? MeetingStore.salva(trascrizione, in: cartella)
             aggiornaElenco()
             selezione = cartella
