@@ -48,7 +48,7 @@ final class TranscriptionEngine {
             let durata = Double(campioni.count) / 16000
 
             fase = .diarizzazione
-            let risultato = try diarizzatore.performCompleteDiarization(campioni, sampleRate: 16000)
+            let risultato = try await diarizzatore.process(audio: campioni)
             let turni = TurniParlato.consolida(risultato.segments.map {
                 TurnoParlato(
                     idParlante: $0.speakerId,

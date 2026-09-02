@@ -25,7 +25,10 @@ final class ModelStore {
 
     private(set) var stato: Stato = .daScaricare
     private(set) var asr: AsrManager?
-    private(set) var diarizzatore: DiarizerManager?
+    /// Pipeline OFFLINE (clustering globale sull'intero file): quella
+    /// streaming (DiarizerManager) assegna i parlanti blocco per blocco
+    /// e sdoppiava una stessa voce su frasi brevi in blocchi diversi.
+    private(set) var diarizzatore: OfflineDiarizerManager?
 
     /// Scarica (se serve) e inizializza i modelli. Riprovabile: in caso
     /// di errore lo stato torna interrogabile e si può richiamare.
@@ -38,9 +41,8 @@ final class ModelStore {
             try await asr.loadModels(modelliAsr)
 
             stato = .inScaricamento("Modelli di diarizzazione…")
-            let modelliDiar = try await DiarizerModels.downloadIfNeeded()
-            let diarizzatore = DiarizerManager()
-            diarizzatore.initialize(models: modelliDiar)
+            let diarizzatore = OfflineDiarizerManager()
+            try await diarizzatore.prepareModels()
 
             self.asr = asr
             self.diarizzatore = diarizzatore
