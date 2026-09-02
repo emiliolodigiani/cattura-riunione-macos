@@ -49,21 +49,16 @@ xcodebuild -project "cattura riunione.xcodeproj" -scheme "Cattura Riunione" \
 xcodebuild -project "cattura riunione.xcodeproj" -scheme "Cattura Riunione" \
   -destination 'platform=macOS' -derivedDataPath build test
 
-# In Xcode la destinazione dev'essere «Il mio Mac»: con «Any Mac
-# (Apple Silicon, Intel)» i pacchetti compilano anche x86_64 e
-# FluidAudio non compila (usa Float16, inesistente su Intel).
-# Stessa ragione per cui la build Release da riga di comando vuole
-# ARCHS=arm64 globale: i pacchetti Swift in Release compilano
-# universali con le PROPRIE impostazioni.
+# build Release: l'override globale ARCHS=arm64 evita ai pacchetti
+# Swift la fetta x86_64 (in Release compilerebbero universali con le
+# PROPRIE impostazioni, ignorando l'ARCHS del progetto)
 xcodebuild -project "cattura riunione.xcodeproj" -scheme "Cattura Riunione" \
   -configuration Release -destination 'platform=macOS,arch=arm64' \
   -derivedDataPath build ARCHS=arm64 build
-
-# archivio per la distribuzione: Product > Archive da Xcode NON può
-# funzionare (destinazione generica → pacchetti anche x86_64); lo script
-# archivia con ARCHS=arm64 e deposita l'archivio nell'Organizer.
-./scripts/crea-archivio.sh
 ```
+
+L'archivio per la distribuzione si crea da Xcode: Product > Archive,
+poi Organizer per la notarizzazione, come in cattura brano.
 
 Il progetto deve sempre restare apribile e compilabile da Xcode: niente
 generatori esterni, il `.pbxproj` si scrive a mano partendo da quello di
@@ -82,6 +77,14 @@ cattura brano.
 - **FluidAudio**: i modelli si scaricano da Hugging Face al primo uso
   (~1 GB); ogni percorso di codice deve reggere l'assenza dei modelli e
   l'assenza di rete.
+- **Versione di FluidAudio**: agganciata alla revisione `5c19d5e` di
+  main, la prima che compila anche per x86_64 (stub: l'app resta solo
+  arm64). Fino alla 0.15.6 usa `Float16`, inesistente su Intel, e le
+  destinazioni generiche di Xcode («Any Mac» e Product > Archive)
+  falliscono perché i pacchetti compilano universali ignorando ogni
+  impostazione del progetto (verificato in `ee86883`). Non retrocedere
+  sotto quella revisione; alla prossima versione rilasciata (> 0.15.6)
+  si può tornare al vincolo di versione.
 - I file grezzi della registrazione (CAF temporanei) si eliminano a fine
   elaborazione. Nella cartella della riunione restano `riunione.m4a`
   (mix per riascolto/esportazione), `trascrizione.json`, il verbale
