@@ -169,6 +169,10 @@ struct ContentView: View {
             Toggle("Registra le uscite (audio di sistema)", isOn: $registratore.catturaSistema)
                 .disabled(registratore.isRecording)
 
+            if registratore.catturaSistema {
+                MisuratoreLivello(livelli: registratore.livelliSistema)
+            }
+
             HStack {
                 if registratore.isRecording {
                     Button {

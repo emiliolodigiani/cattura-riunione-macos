@@ -24,7 +24,11 @@ final class MeetingRecorder {
         didSet { UserDefaults.standard.set(registraMicrofono, forKey: "registraMicrofono") }
     }
     var catturaSistema: Bool = UserDefaults.standard.object(forKey: "catturaSistema") as? Bool ?? true {
-        didSet { UserDefaults.standard.set(catturaSistema, forKey: "catturaSistema") }
+        didSet {
+            UserDefaults.standard.set(catturaSistema, forKey: "catturaSistema")
+            guard !inRegistrazione else { return }
+            catturaSistema ? avviaMonitoraggioSistema() : fermaMonitoraggioSistema()
+        }
     }
 
     /// Avviso non bloccante (es. permesso di sistema negato).
@@ -32,12 +36,19 @@ final class MeetingRecorder {
     private(set) var staMiscelando = false
     private(set) var inRegistrazione = false
     private(set) var elapsed: TimeInterval = 0
+    /// Picchi (0…1) dell'audio di sistema, anche in solo monitoraggio.
+    private(set) var livelliSistema: [Float] = []
 
     private var urlSistema: URL?
     private var avvio: Date?
     private var orologio: Task<Void, Never>?
+    private var misuratoreSistema: Task<Void, Never>?
 
     var isRecording: Bool { inRegistrazione }
+
+    init() {
+        if catturaSistema { avviaMonitoraggioSistema() }
+    }
 
     func avvia() async {
         guard !inRegistrazione else { return }
@@ -56,8 +67,13 @@ final class MeetingRecorder {
 
         if catturaSistema {
             do {
+                // avvia() rimpiazza l'eventuale tap di monitoraggio.
                 urlSistema = try sistema.avvia()
+                avviaMisuratoreSistema()
             } catch {
+                misuratoreSistema?.cancel()
+                misuratoreSistema = nil
+                livelliSistema = []
                 if registraMicrofono {
                     // Col microfono attivo si prosegue comunque: la
                     // riunione non va persa per un permesso negato.
@@ -95,6 +111,8 @@ final class MeetingRecorder {
         let urlMicrofono = microfono.isRecording ? microfono.stopRecording() : nil
         let urlSistema = self.urlSistema
         self.urlSistema = nil
+        // Il misuratore di sistema riprende (o si spegne) subito.
+        catturaSistema ? avviaMonitoraggioSistema() : fermaMonitoraggioSistema()
         guard urlMicrofono != nil || urlSistema != nil else { return nil }
 
         staMiscelando = true
@@ -156,6 +174,42 @@ final class MeetingRecorder {
     private nonisolated func pulisci(_ urls: URL?...) {
         for url in urls.compactMap({ $0 }) {
             try? FileManager.default.removeItem(at: url)
+        }
+    }
+
+    // MARK: Monitoraggio dell'audio di sistema
+
+    /// Tap senza file, solo per il misuratore. Silenzioso se fallisce
+    /// (es. permesso negato): il misuratore resta semplicemente vuoto e
+    /// l'errore vero arriva quando si prova a registrare.
+    private func avviaMonitoraggioSistema() {
+        guard !inRegistrazione else { return }
+        try? sistema.avviaMonitoraggio()
+        avviaMisuratoreSistema()
+    }
+
+    private func fermaMonitoraggioSistema() {
+        sistema.ferma()
+        misuratoreSistema?.cancel()
+        misuratoreSistema = nil
+        livelliSistema = []
+    }
+
+    /// Travasa i picchi del tap nello stato osservabile, con la stessa
+    /// balistica del misuratore del microfono.
+    private func avviaMisuratoreSistema() {
+        misuratoreSistema?.cancel()
+        misuratoreSistema = Task { [weak self] in
+            while !Task.isCancelled {
+                try? await Task.sleep(nanoseconds: 50_000_000)
+                guard let self else { break }
+                let picchi = self.sistema.consumaPicchi()
+                if self.livelliSistema.count != picchi.count {
+                    self.livelliSistema = picchi
+                } else {
+                    self.livelliSistema = zip(self.livelliSistema, picchi).map { max($1, $0 * 0.631) }
+                }
+            }
         }
     }
 }
