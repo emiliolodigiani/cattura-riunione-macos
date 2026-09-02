@@ -6,6 +6,7 @@
 //  a destra l'elenco delle riunioni; la selezione apre il verbale.
 //
 
+import AppKit
 import SwiftUI
 import UniformTypeIdentifiers
 
@@ -18,6 +19,9 @@ struct ContentView: View {
     @State private var riunioni: [Riunione] = []
     @State private var selezione: URL?
     @State private var cartellaInElaborazione: URL?
+    @State private var riunioneInRinomina: Riunione?
+    @State private var nuovoNomeRiunione = ""
+    @State private var riunioneInEliminazione: Riunione?
 
     var body: some View {
         NavigationSplitView {
@@ -56,12 +60,62 @@ struct ContentView: View {
                     }
                 }
                 .tag(riunione.cartella)
+                .contextMenu {
+                    Button("Rinomina…") {
+                        nuovoNomeRiunione = riunione.nome
+                        riunioneInRinomina = riunione
+                    }
+                    Button("Esporta audio…") { esportaAudio(riunione) }
+                    Button("Mostra nel Finder") {
+                        NSWorkspace.shared.activateFileViewerSelecting([riunione.cartella])
+                    }
+                    Divider()
+                    Button("Elimina…", role: .destructive) { riunioneInEliminazione = riunione }
+                }
             }
             .onDrop(of: [UTType.audio], isTargeted: nil) { fornitori in
                 importa(fornitori)
             }
+
+            HStack {
+                Button {
+                    importaConPannello()
+                } label: {
+                    Label("Importa file audio…", systemImage: "square.and.arrow.down")
+                }
+                .keyboardShortcut("o", modifiers: .command)
+                .disabled(registratore.isRecording || cartellaInElaborazione != nil)
+            }
+            .padding(.horizontal, 12)
+            Text("Puoi anche trascinare un file audio sull'elenco per trascriverlo.")
+                .font(.caption)
+                .foregroundStyle(.secondary)
+                .padding(.horizontal, 12)
+                .padding(.bottom, 8)
         }
         .padding(.top, 8)
+        .alert("Rinomina riunione", isPresented: rinominaPresentata) {
+            TextField("Nome", text: $nuovoNomeRiunione)
+            Button("Annulla", role: .cancel) { riunioneInRinomina = nil }
+            Button("Rinomina") { confermaRinominaRiunione() }
+        }
+        .alert("Eliminare la riunione?", isPresented: eliminazionePresentata) {
+            Button("Annulla", role: .cancel) { riunioneInEliminazione = nil }
+            Button("Sposta nel Cestino", role: .destructive) { confermaEliminaRiunione() }
+        } message: {
+            Text("«\(riunioneInEliminazione?.nome ?? "")» finisce nel Cestino con audio e verbale.")
+        }
+    }
+
+    /// I due alert si presentano quando c'è una riunione in lavorazione.
+    private var rinominaPresentata: Binding<Bool> {
+        Binding(get: { riunioneInRinomina != nil },
+                set: { if !$0 { riunioneInRinomina = nil } })
+    }
+
+    private var eliminazionePresentata: Binding<Bool> {
+        Binding(get: { riunioneInEliminazione != nil },
+                set: { if !$0 { riunioneInEliminazione = nil } })
     }
 
     private var pannelloRegistrazione: some View {
@@ -183,25 +237,86 @@ struct ContentView: View {
         _ = fornitore.loadObject(ofClass: URL.self) { url, _ in
             guard let url else { return }
             Task { @MainActor in
-                let base = cartelle.url
-                do {
-                    let cartella = try MeetingStore.creaCartella(in: base, data: Date())
-                    let destinazione = cartella.appendingPathComponent(MeetingStore.nomeAudio)
-                    // L'audio importato si riporta comunque a m4a 48 kHz,
-                    // così la cartella riunione è uniforme.
-                    try await Task.detached(priority: .userInitiated) {
-                        let campioni = try AudioCampioni.carica(url, frequenza: 48000)
-                        try AudioCampioni.scriviM4A(campioni, frequenza: 48000, in: destinazione)
-                    }.value
-                    aggiornaElenco()
-                    await trascrivi(cartella: cartella)
-                } catch {
-                    registratore.microfono.errorMessage =
-                        "Importazione non riuscita: \(error.localizedDescription)"
-                }
+                await importaFile(url)
             }
         }
         return true
+    }
+
+    private func importaConPannello() {
+        let pannello = NSOpenPanel()
+        pannello.canChooseFiles = true
+        pannello.canChooseDirectories = false
+        pannello.allowsMultipleSelection = false
+        pannello.allowedContentTypes = [.audio]
+        pannello.prompt = "Importa"
+        pannello.message = "Scegli un file audio da trascrivere"
+        guard pannello.runModal() == .OK, let url = pannello.url else { return }
+        Task { await importaFile(url) }
+    }
+
+    private func importaFile(_ url: URL) async {
+        do {
+            let cartella = try MeetingStore.creaCartella(in: cartelle.url, data: Date())
+            let destinazione = cartella.appendingPathComponent(MeetingStore.nomeAudio)
+            // L'audio importato si riporta comunque a m4a 48 kHz
+            // normalizzato, così la cartella riunione è uniforme.
+            try await Task.detached(priority: .userInitiated) {
+                let campioni = AudioCampioni.normalizza(
+                    try AudioCampioni.carica(url, frequenza: 48000)
+                )
+                try AudioCampioni.scriviM4A(campioni, frequenza: 48000, in: destinazione)
+            }.value
+            aggiornaElenco()
+            await trascrivi(cartella: cartella)
+        } catch {
+            registratore.microfono.errorMessage =
+                "Importazione non riuscita: \(error.localizedDescription)"
+        }
+    }
+
+    // MARK: Gestione delle riunioni
+
+    private func confermaRinominaRiunione() {
+        guard let riunione = riunioneInRinomina else { return }
+        riunioneInRinomina = nil
+        do {
+            let nuova = try MeetingStore.rinomina(cartella: riunione.cartella, in: nuovoNomeRiunione)
+            if selezione == riunione.cartella { selezione = nuova }
+            aggiornaElenco()
+        } catch {
+            registratore.microfono.errorMessage = error.localizedDescription
+        }
+    }
+
+    private func confermaEliminaRiunione() {
+        guard let riunione = riunioneInEliminazione else { return }
+        riunioneInEliminazione = nil
+        do {
+            try MeetingStore.elimina(cartella: riunione.cartella)
+            if selezione == riunione.cartella { selezione = nil }
+            aggiornaElenco()
+        } catch {
+            registratore.microfono.errorMessage =
+                "Eliminazione non riuscita: \(error.localizedDescription)"
+        }
+    }
+
+    private func esportaAudio(_ riunione: Riunione) {
+        let pannello = NSSavePanel()
+        pannello.allowedContentTypes = [.mpeg4Audio]
+        pannello.nameFieldStringValue = "\(riunione.nome).m4a"
+        pannello.prompt = "Esporta"
+        guard pannello.runModal() == .OK, let destinazione = pannello.url else { return }
+        do {
+            if FileManager.default.fileExists(atPath: destinazione.path) {
+                try FileManager.default.removeItem(at: destinazione)
+            }
+            try FileManager.default.copyItem(at: riunione.audioURL, to: destinazione)
+        } catch {
+            registratore.microfono.errorMessage =
+                "Esportazione dell'audio non riuscita: \(error.localizedDescription)"
+        }
     }
 }
 

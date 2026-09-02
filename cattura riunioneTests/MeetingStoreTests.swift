@@ -54,6 +54,35 @@ final class MeetingStoreTests: XCTestCase {
         XCTAssertTrue(FileManager.default.fileExists(atPath: verbale.path))
     }
 
+    func testRinominaCartella() throws {
+        let trascrizione = self.trascrizione
+        let cartella = try MeetingStore.creaCartella(in: base, data: Date())
+        try MeetingStore.salva(trascrizione, in: cartella)
+        let nuova = try MeetingStore.rinomina(cartella: cartella, in: "Riunione col cliente")
+        XCTAssertEqual(nuova.lastPathComponent, "Riunione col cliente")
+        XCTAssertFalse(FileManager.default.fileExists(atPath: cartella.path))
+        // La trascrizione resta leggibile e il verbale viene rigenerato
+        // col nuovo titolo.
+        XCTAssertEqual(MeetingStore.caricaTrascrizione(da: nuova), trascrizione)
+        let verbale = try String(contentsOf: nuova.appendingPathComponent("verbale.md"), encoding: .utf8)
+        XCTAssertTrue(verbale.hasPrefix("# Riunione col cliente\n"))
+    }
+
+    func testRinominaRifiutaNomeVuotoOGiaUsato() throws {
+        let prima = try MeetingStore.creaCartella(in: base, data: Date())
+        let seconda = try MeetingStore.creaCartella(in: base, data: Date())
+        XCTAssertThrowsError(try MeetingStore.rinomina(cartella: prima, in: "   "))
+        XCTAssertThrowsError(
+            try MeetingStore.rinomina(cartella: prima, in: seconda.lastPathComponent)
+        )
+    }
+
+    func testEliminaSpostaNelCestino() throws {
+        let cartella = try MeetingStore.creaCartella(in: base, data: Date())
+        try MeetingStore.elimina(cartella: cartella)
+        XCTAssertFalse(FileManager.default.fileExists(atPath: cartella.path))
+    }
+
     func testElenca() throws {
         let cartella = try MeetingStore.creaCartella(in: base, data: Date())
         // Senza riunione.m4a la cartella non è una riunione valida.

@@ -24,6 +24,17 @@ nonisolated enum MeetingStore {
     static let nomeTrascrizione = "trascrizione.json"
     static let nomeVerbale = "verbale.md"
 
+    enum Errore: LocalizedError {
+        case nomeNonValido
+        case nomeGiaUsato
+        var errorDescription: String? {
+            switch self {
+            case .nomeNonValido: "Il nome della riunione non può essere vuoto."
+            case .nomeGiaUsato: "Esiste già una riunione con questo nome."
+            }
+        }
+    }
+
     private static var formattatore: DateFormatter {
         let f = DateFormatter()
         f.locale = Locale(identifier: "it_IT")
@@ -72,6 +83,37 @@ nonisolated enum MeetingStore {
         )
         try markdown.data(using: .utf8)!
             .write(to: cartella.appendingPathComponent(nomeVerbale), options: .atomic)
+    }
+
+    /// Rinomina la cartella della riunione e rigenera il verbale (il cui
+    /// titolo è il nome della cartella). Restituisce la nuova cartella.
+    static func rinomina(cartella: URL, in nome: String) throws -> URL {
+        let pulito = nome
+            .trimmingCharacters(in: .whitespacesAndNewlines)
+            .replacingOccurrences(of: "/", with: "-")
+            .replacingOccurrences(of: ":", with: "-")
+        guard !pulito.isEmpty else { throw Errore.nomeNonValido }
+        let destinazione = cartella.deletingLastPathComponent()
+            .appendingPathComponent(pulito, isDirectory: true)
+        guard destinazione != cartella else { return cartella }
+        guard !FileManager.default.fileExists(atPath: destinazione.path) else {
+            throw Errore.nomeGiaUsato
+        }
+        try FileManager.default.moveItem(at: cartella, to: destinazione)
+        if let trascrizione = caricaTrascrizione(da: destinazione) {
+            try salvaVerbale(trascrizione, in: destinazione)
+        }
+        return destinazione
+    }
+
+    /// Sposta la riunione nel Cestino (eliminazione recuperabile); se il
+    /// volume non ha un Cestino, elimina definitivamente.
+    static func elimina(cartella: URL) throws {
+        do {
+            try FileManager.default.trashItem(at: cartella, resultingItemURL: nil)
+        } catch {
+            try FileManager.default.removeItem(at: cartella)
+        }
     }
 
     /// Le riunioni valide (cartelle con riunione.m4a), dalla più recente.
