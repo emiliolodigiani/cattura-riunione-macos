@@ -34,6 +34,17 @@ final class MeetingStoreTests: XCTestCase {
         XCTAssertTrue(FileManager.default.fileExists(atPath: cartella.path))
     }
 
+    func testCreaCartellaConNomePersonalizzato() throws {
+        let prima = try MeetingStore.creaCartella(in: base, nome: "Chiacchierata col cliente")
+        XCTAssertEqual(prima.lastPathComponent, "Chiacchierata col cliente")
+        // Stesso nome → suffisso progressivo, come per le cartelle datate.
+        let seconda = try MeetingStore.creaCartella(in: base, nome: "Chiacchierata col cliente")
+        XCTAssertEqual(seconda.lastPathComponent, "Chiacchierata col cliente ~2")
+        // Nome vuoto → si ricade sul nome datato standard.
+        let datata = try MeetingStore.creaCartella(in: base, nome: "   ")
+        XCTAssertTrue(datata.lastPathComponent.hasPrefix("Riunione "))
+    }
+
     func testCartellaDuplicataRiceveSuffisso() throws {
         let data = Date()
         let prima = try MeetingStore.creaCartella(in: base, data: data)

@@ -45,7 +45,17 @@ nonisolated enum MeetingStore {
     /// Crea la cartella "Riunione AAAA-MM-GG HH.mm" (con suffisso ~2, ~3…
     /// se esiste già) e la restituisce.
     static func creaCartella(in base: URL, data: Date) throws -> URL {
-        let nomeBase = "Riunione \(formattatore.string(from: data))"
+        try creaCartella(in: base, nome: "", data: data)
+    }
+
+    /// Crea una cartella riunione col nome dato (es. il nome del file
+    /// importato); un nome vuoto ricade sul nome datato standard.
+    static func creaCartella(in base: URL, nome: String, data: Date = Date()) throws -> URL {
+        let pulito = nome
+            .trimmingCharacters(in: .whitespacesAndNewlines)
+            .replacingOccurrences(of: "/", with: "-")
+            .replacingOccurrences(of: ":", with: "-")
+        let nomeBase = pulito.isEmpty ? "Riunione \(formattatore.string(from: data))" : pulito
         // isDirectory esplicito: senza, appendingPathComponent aggiunge la
         // barra finale solo se la cartella esiste già, e URL uguali sulla
         // carta risultano diverse nei confronti (selezione, test).

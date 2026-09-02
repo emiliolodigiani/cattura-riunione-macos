@@ -60,6 +60,12 @@ struct ContentView: View {
                     }
                 }
                 .tag(riunione.cartella)
+                // simultaneousGesture: un normale onTapGesture ruberebbe
+                // il clic singolo alla selezione della lista.
+                .simultaneousGesture(TapGesture(count: 2).onEnded {
+                    nuovoNomeRiunione = riunione.nome
+                    riunioneInRinomina = riunione
+                })
                 .contextMenu {
                     Button(riunione.haTrascrizione ? "Trascrivi di nuovo" : "Trascrivi") {
                         Task { await trascrivi(cartella: riunione.cartella) }
@@ -261,7 +267,10 @@ struct ContentView: View {
 
     private func importaFile(_ url: URL) async {
         do {
-            let cartella = try MeetingStore.creaCartella(in: cartelle.url, data: Date())
+            // La riunione importata prende il nome del file.
+            let cartella = try MeetingStore.creaCartella(
+                in: cartelle.url, nome: url.deletingPathExtension().lastPathComponent
+            )
             let destinazione = cartella.appendingPathComponent(MeetingStore.nomeAudio)
             // L'audio importato si riporta comunque a m4a 48 kHz
             // normalizzato, così la cartella riunione è uniforme.
