@@ -1,8 +1,8 @@
 # Cattura Riunione
 
-App macOS (15+, Apple Silicon) che registra riunioni — microfono e, per
-le call, audio di sistema — e produce il verbale con trascrizione e
-divisione dei parlanti. Tutto avviene in locale: dopo il primo
+App macOS (14+, Apple Silicon da M1 in poi) che registra riunioni —
+microfono e, per le call, audio di sistema (macOS 14.2+) — e produce il
+verbale con trascrizione e divisione dei parlanti. Tutto avviene in locale: dopo il primo
 scaricamento dei modelli (~1 GB da Hugging Face) non serve la rete.
 
 ## Come funziona

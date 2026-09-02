@@ -174,7 +174,11 @@ struct ContentView: View {
             }
 
             Toggle("Registra le uscite (audio di sistema)", isOn: $registratore.catturaSistema)
-                .disabled(registratore.isRecording)
+                .disabled(registratore.isRecording || !MeetingRecorder.sistemaDisponibile)
+            if !MeetingRecorder.sistemaDisponibile {
+                Text("Richiede macOS 14.2 o successivo.")
+                    .font(.caption).foregroundStyle(.secondary)
+            }
 
             if registratore.catturaSistema {
                 MisuratoreLivello(livelli: registratore.livelliSistema)

@@ -17,7 +17,18 @@ import Observation
 final class MeetingRecorder {
 
     let microfono = AudioRecorder()
-    private let sistema = SystemAudioTap()
+
+    /// Vero dove esiste la cattura dell'audio di sistema (macOS 14.2+).
+    nonisolated static var sistemaDisponibile: Bool {
+        if #available(macOS 14.2, *) { return true }
+        return false
+    }
+
+    /// Il tap di sistema, in un contenitore Any: una proprietà del tipo
+    /// SystemAudioTap richiederebbe @available sull'intera classe.
+    private let tapSistema: Any?
+    @available(macOS 14.2, *)
+    private var sistema: SystemAudioTap? { tapSistema as? SystemAudioTap }
 
     /// Preferenze dell'utente: quali sorgenti registrare.
     var registraMicrofono: Bool = UserDefaults.standard.object(forKey: "registraMicrofono") as? Bool ?? true {
@@ -47,6 +58,11 @@ final class MeetingRecorder {
     var isRecording: Bool { inRegistrazione }
 
     init() {
+        if #available(macOS 14.2, *) {
+            tapSistema = SystemAudioTap()
+        } else {
+            tapSistema = nil
+        }
         if catturaSistema { avviaMonitoraggioSistema() }
     }
 
@@ -66,23 +82,30 @@ final class MeetingRecorder {
         }
 
         if catturaSistema {
-            do {
-                // avvia() rimpiazza l'eventuale tap di monitoraggio.
-                urlSistema = try sistema.avvia()
-                avviaMisuratoreSistema()
-            } catch {
-                misuratoreSistema?.cancel()
-                misuratoreSistema = nil
-                livelliSistema = []
-                if registraMicrofono {
-                    // Col microfono attivo si prosegue comunque: la
-                    // riunione non va persa per un permesso negato.
-                    avvisoSistema = "Audio di sistema non catturato: \(error.localizedDescription)"
-                } else {
-                    microfono.errorMessage =
-                        "Impossibile catturare l'audio di sistema: \(error.localizedDescription)"
-                    return
+            if #available(macOS 14.2, *), let sistema {
+                do {
+                    // avvia() rimpiazza l'eventuale tap di monitoraggio.
+                    urlSistema = try sistema.avvia()
+                    avviaMisuratoreSistema()
+                } catch {
+                    misuratoreSistema?.cancel()
+                    misuratoreSistema = nil
+                    livelliSistema = []
+                    if registraMicrofono {
+                        // Col microfono attivo si prosegue comunque: la
+                        // riunione non va persa per un permesso negato.
+                        avvisoSistema = "Audio di sistema non catturato: \(error.localizedDescription)"
+                    } else {
+                        microfono.errorMessage =
+                            "Impossibile catturare l'audio di sistema: \(error.localizedDescription)"
+                        return
+                    }
                 }
+            } else if registraMicrofono {
+                avvisoSistema = "L'audio di sistema richiede macOS 14.2: registro il solo microfono."
+            } else {
+                microfono.errorMessage = "La cattura dell'audio di sistema richiede macOS 14.2."
+                return
             }
         }
 
@@ -107,7 +130,7 @@ final class MeetingRecorder {
         orologio = nil
         avvio = nil
 
-        sistema.ferma()
+        if #available(macOS 14.2, *) { sistema?.ferma() }
         let urlMicrofono = microfono.isRecording ? microfono.stopRecording() : nil
         let urlSistema = self.urlSistema
         self.urlSistema = nil
@@ -197,12 +220,13 @@ final class MeetingRecorder {
     /// l'errore vero arriva quando si prova a registrare.
     private func avviaMonitoraggioSistema() {
         guard !inRegistrazione else { return }
+        guard #available(macOS 14.2, *), let sistema else { return }
         try? sistema.avviaMonitoraggio()
         avviaMisuratoreSistema()
     }
 
     private func fermaMonitoraggioSistema() {
-        sistema.ferma()
+        if #available(macOS 14.2, *) { sistema?.ferma() }
         misuratoreSistema?.cancel()
         misuratoreSistema = nil
         livelliSistema = []
@@ -216,7 +240,8 @@ final class MeetingRecorder {
             while !Task.isCancelled {
                 try? await Task.sleep(nanoseconds: 50_000_000)
                 guard let self else { break }
-                let picchi = self.sistema.consumaPicchi()
+                var picchi: [Float] = []
+                if #available(macOS 14.2, *) { picchi = self.sistema?.consumaPicchi() ?? [] }
                 if self.livelliSistema.count != picchi.count {
                     self.livelliSistema = picchi
                 } else {

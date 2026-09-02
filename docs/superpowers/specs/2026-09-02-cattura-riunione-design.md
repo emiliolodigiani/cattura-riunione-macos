@@ -41,7 +41,10 @@ dell'app "cattura brano" (`~/workspace/cattura brano`).
 
 ## Piattaforma e dipendenze
 
-- macOS 15+, solo Apple Silicon.
+- macOS 14+ (la cattura dell'audio di sistema richiede le API dei
+  process tap, macOS 14.2+; su 14.0/14.1 degrada a solo microfono),
+  solo Apple Silicon, da M1 in poi. [Requisito aggiornato dall'utente
+  il 2/9/2026: in origine macOS 15+.]
 - SwiftUI + AVFoundation/Core Audio, progetto Xcode formato moderno
   (objectVersion 77, cartelle sincronizzate) derivato da quello di
   cattura brano.

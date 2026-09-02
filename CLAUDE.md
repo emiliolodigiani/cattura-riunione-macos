@@ -1,6 +1,7 @@
 # cattura riunione
 
-App macOS nativa (SwiftUI, macOS 15+, Apple Silicon) che registra riunioni —
+App macOS nativa (SwiftUI, macOS 14+ — audio di sistema da 14.2 —,
+solo Apple Silicon, da M1 in poi) che registra riunioni —
 microfono + audio di sistema per le call — e produce il verbale con
 trascrizione e divisione dei parlanti, tutto in locale via FluidAudio.
 

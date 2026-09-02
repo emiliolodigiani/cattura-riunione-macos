@@ -68,6 +68,10 @@ nonisolated final class MisuratorePicchi: @unchecked Sendable {
     }
 }
 
+/// L'API dei process tap (CATapDescription e compagnia) nasce in
+/// macOS 14.2: su 14.0/14.1 la classe non è disponibile e l'app
+/// registra il solo microfono.
+@available(macOS 14.2, *)
 final class SystemAudioTap {
 
     nonisolated enum Errore: LocalizedError {
