@@ -18,7 +18,8 @@ final class TranscriptionEngine {
     enum Fase: Equatable {
         case inattivo
         case decodifica
-        case diarizzazione
+        /// Avanzamento 0…1 sui blocchi di diarizzazione.
+        case diarizzazione(Double)
         /// Avanzamento 0…1 sulla trascrizione dei turni.
         case trascrizione(Double)
         case completato
@@ -60,8 +61,8 @@ final class TranscriptionEngine {
             }.value
             let durata = Double(campioni.count) / 16000
 
-            fase = .diarizzazione
-            let risultato = try await diarizzatore.process(audio: campioni)
+            fase = .diarizzazione(0)
+            let risultato = try await diarizzatore.process(audio: campioni, progressCallback: avanzamentoDiarizzazione())
             let turni = TurniParlato.consolida(risultato.segments.map(TurnoParlato.init))
 
             let interventi = try await trascriviTurni(turni, con: asr) { _ in campioni }
@@ -88,9 +89,14 @@ final class TranscriptionEngine {
             }.value
             let durata = Double(max(campioniMic.count, campioniSistema.count)) / 16000
 
-            fase = .diarizzazione
-            let esitoMic = try await diarizzatore.process(audio: campioniMic)
-            let esitoSistema = try await diarizzatore.process(audio: campioniSistema)
+            fase = .diarizzazione(0)
+            // Le due tracce si spartiscono la barra: 0…0,5 e 0,5…1.
+            let esitoMic = try await diarizzatore.process(
+                audio: campioniMic, progressCallback: avanzamentoDiarizzazione(da: 0, a: 0.5)
+            )
+            let esitoSistema = try await diarizzatore.process(
+                audio: campioniSistema, progressCallback: avanzamentoDiarizzazione(da: 0.5, a: 1)
+            )
             let turni = TurniParlato.unisci(
                 microfono: esitoMic.segments.map(TurnoParlato.init),
                 sistema: esitoSistema.segments.map(TurnoParlato.init)
@@ -103,6 +109,21 @@ final class TranscriptionEngine {
         } catch {
             fase = .errore("Trascrizione non riuscita: \(error.localizedDescription)")
             return nil
+        }
+    }
+
+    /// Callback di progresso della diarizzazione (chiamato fuori dal
+    /// main actor), riportato sulla fase entro l'intervallo dato.
+    private func avanzamentoDiarizzazione(
+        da inizio: Double = 0, a fine: Double = 1
+    ) -> @Sendable (Int, Int) -> Void {
+        { fatti, totale in
+            guard totale > 0 else { return }
+            let quota = inizio + (fine - inizio) * Double(fatti) / Double(totale)
+            Task { @MainActor [weak self] in
+                guard let self, case .diarizzazione = self.fase else { return }
+                self.fase = .diarizzazione(min(1, quota))
+            }
         }
     }
 

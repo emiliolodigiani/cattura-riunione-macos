@@ -19,6 +19,12 @@ struct ContentView: View {
     @State private var riunioni: [Riunione] = []
     @State private var selezione: URL?
     @State private var cartellaInElaborazione: URL?
+    /// Nome del file in conversione durante l'importazione.
+    @State private var importazioneInCorso: String?
+    /// Cresce a ogni trascrizione salvata: entra nell'identità della
+    /// vista del verbale, che così si ricarica anche quando la riunione
+    /// appena trascritta era già selezionata.
+    @State private var versioneTrascrizione = 0
     /// Cartella della riunione in rinomina in linea (stile Finder).
     @State private var rinominaInLinea: URL?
     @State private var nomeInModifica = ""
@@ -32,7 +38,7 @@ struct ContentView: View {
         } detail: {
             if let selezione {
                 VerbaleView(cartella: selezione)
-                    .id(selezione)
+                    .id("\(selezione.absoluteString)#\(versioneTrascrizione)")
             } else {
                 Text("Seleziona una riunione o avviane una nuova.")
                     .foregroundStyle(.secondary)
@@ -121,7 +127,8 @@ struct ContentView: View {
                     Label("Importa file audio…", systemImage: "square.and.arrow.down")
                 }
                 .keyboardShortcut("o", modifiers: .command)
-                .disabled(registratore.isRecording || cartellaInElaborazione != nil)
+                .disabled(registratore.isRecording || cartellaInElaborazione != nil
+                          || importazioneInCorso != nil)
             }
             .padding(.horizontal, 12)
             Text("Puoi anche trascinare un file audio sull'elenco per trascriverlo.")
@@ -191,6 +198,7 @@ struct ContentView: View {
                     }
                     .disabled(registratore.staMiscelando
                               || cartellaInElaborazione != nil
+                              || importazioneInCorso != nil
                               || (!registratore.registraMicrofono && !registratore.catturaSistema))
                 }
             }
@@ -228,6 +236,13 @@ struct ContentView: View {
             }
             .padding(.horizontal, 12)
         }
+        if let nome = importazioneInCorso {
+            HStack(spacing: 6) {
+                ProgressView().controlSize(.small)
+                Text("Importazione di «\(nome)»…").font(.caption)
+            }
+            .padding(.horizontal, 12)
+        }
         if let motore, cartellaInElaborazione != nil {
             statoElaborazione(motore.fase)
                 .padding(.horizontal, 12)
@@ -241,8 +256,10 @@ struct ContentView: View {
             EmptyView()
         case .decodifica:
             Label("Preparazione dell'audio…", systemImage: "waveform").font(.caption)
-        case .diarizzazione:
-            Label("Riconoscimento dei parlanti…", systemImage: "person.2").font(.caption)
+        case .diarizzazione(let avanzamento):
+            ProgressView(value: avanzamento) {
+                Text("Riconoscimento dei parlanti…").font(.caption)
+            }
         case .trascrizione(let avanzamento):
             ProgressView(value: avanzamento) { Text("Trascrizione…").font(.caption) }
         case .errore(let messaggio):
@@ -269,6 +286,7 @@ struct ContentView: View {
         if let trascrizione = await motore.trascrivi(riunione: cartella) {
             try? MeetingStore.salva(trascrizione, in: cartella)
             aggiornaElenco()
+            versioneTrascrizione += 1
             selezione = cartella
         }
     }
@@ -297,6 +315,8 @@ struct ContentView: View {
     }
 
     private func importaFile(_ url: URL) async {
+        guard importazioneInCorso == nil else { return }
+        importazioneInCorso = url.lastPathComponent
         do {
             // La riunione importata prende il nome del file.
             let cartella = try MeetingStore.creaCartella(
@@ -311,9 +331,11 @@ struct ContentView: View {
                 )
                 try AudioCampioni.scriviM4A(campioni, frequenza: 48000, in: destinazione)
             }.value
+            importazioneInCorso = nil
             aggiornaElenco()
             await trascrivi(cartella: cartella)
         } catch {
+            importazioneInCorso = nil
             registratore.microfono.errorMessage =
                 "Importazione non riuscita: \(error.localizedDescription)"
         }
