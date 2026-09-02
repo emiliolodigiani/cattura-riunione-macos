@@ -61,6 +61,10 @@ struct ContentView: View {
                 }
                 .tag(riunione.cartella)
                 .contextMenu {
+                    Button(riunione.haTrascrizione ? "Trascrivi di nuovo" : "Trascrivi") {
+                        Task { await trascrivi(cartella: riunione.cartella) }
+                    }
+                    .disabled(motore == nil || cartellaInElaborazione != nil)
                     Button("Rinomina…") {
                         nuovoNomeRiunione = riunione.nome
                         riunioneInRinomina = riunione
