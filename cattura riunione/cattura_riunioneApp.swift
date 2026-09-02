@@ -13,5 +13,8 @@ struct CatturaRiunioneApp: App {
         WindowGroup {
             ContentView()
         }
+        Settings {
+            SettingsView()
+        }
     }
 }
