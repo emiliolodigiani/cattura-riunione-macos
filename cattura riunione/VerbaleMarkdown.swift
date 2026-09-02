@@ -22,6 +22,19 @@ nonisolated enum VerbaleMarkdown {
         righe.append("\(formattatore.string(from: data)) · Durata: \(FormattaTempo.hhmmss(trascrizione.durata))")
         righe.append("")
 
+        // Riepilogo: chi ha parlato e per quanto (quota sul parlato totale).
+        let tempi = trascrizione.tempiDiParola()
+        let totale = tempi.reduce(0) { $0 + $1.durata }
+        if totale > 0 {
+            let voci = tempi.map { voce in
+                let quota = Int((voce.durata / totale * 100).rounded())
+                return "**\(trascrizione.nome(perParlante: voce.idParlante))** "
+                    + "\(FormattaTempo.hhmmss(voce.durata)) (\(quota)%)"
+            }
+            righe.append("Parlanti: " + voci.joined(separator: " · "))
+            righe.append("")
+        }
+
         if trascrizione.interventi.isEmpty {
             righe.append("Nessun intervento rilevato.")
         } else {

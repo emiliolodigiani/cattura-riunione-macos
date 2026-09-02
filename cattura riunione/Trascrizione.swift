@@ -43,6 +43,17 @@ nonisolated struct Trascrizione: Codable, Equatable {
         }
     }
 
+    /// Tempo di parola complessivo per parlante, dal più loquace.
+    func tempiDiParola() -> [(idParlante: String, durata: Double)] {
+        var totali: [String: Double] = [:]
+        for intervento in interventi {
+            totali[intervento.idParlante, default: 0] += max(0, intervento.fine - intervento.inizio)
+        }
+        return totali
+            .map { (idParlante: $0.key, durata: $0.value) }
+            .sorted { $0.durata > $1.durata }
+    }
+
     /// Etichette predefinite: "Parlante 1" per chi parla per primo, e così via.
     static func etichette(perOrdineDiComparsa interventi: [Intervento]) -> [String: String] {
         var etichette: [String: String] = [:]

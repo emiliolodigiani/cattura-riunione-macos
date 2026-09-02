@@ -50,6 +50,20 @@ final class TrascrizioneTests: XCTestCase {
         XCTAssertEqual(riletta, t)
     }
 
+    func testTempiDiParola() {
+        let t = trascrizioneDiProva()
+        let tempi = t.tempiDiParola()
+        // speaker_1: (4.2-0) + (12-9.4) = 6.8 s; speaker_0: 9-4.5 = 4.5 s.
+        XCTAssertEqual(tempi.map(\.idParlante), ["speaker_1", "speaker_0"])
+        XCTAssertEqual(tempi[0].durata, 6.8, accuracy: 0.001)
+        XCTAssertEqual(tempi[1].durata, 4.5, accuracy: 0.001)
+    }
+
+    func testTempiDiParolaVuoti() {
+        let t = Trascrizione(versione: 1, durata: 0, interventi: [], nomiParlanti: [:])
+        XCTAssertTrue(t.tempiDiParola().isEmpty)
+    }
+
     func testFormattaTempo() {
         XCTAssertEqual(FormattaTempo.hhmmss(0), "00:00:00")
         XCTAssertEqual(FormattaTempo.hhmmss(62.9), "00:01:02")

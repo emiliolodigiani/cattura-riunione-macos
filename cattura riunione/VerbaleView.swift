@@ -39,6 +39,7 @@ struct VerbaleView: View {
     private func verbale(_ t: Trascrizione) -> some View {
         ScrollView {
             LazyVStack(alignment: .leading, spacing: 14) {
+                riepilogo(t)
                 ForEach(t.interventi) { intervento in
                     riga(intervento, in: t)
                 }
@@ -57,6 +58,38 @@ struct VerbaleView: View {
                 Button("Copia") { copia(t) }
                 Button("Esporta") { esporta(t) }
             }
+        }
+    }
+
+    /// Chi ha parlato e per quanto, in testa al verbale.
+    @ViewBuilder
+    private func riepilogo(_ t: Trascrizione) -> some View {
+        let tempi = t.tempiDiParola()
+        let totale = tempi.reduce(0) { $0 + $1.durata }
+        if totale > 0 {
+            VStack(alignment: .leading, spacing: 5) {
+                ForEach(tempi, id: \.idParlante) { voce in
+                    HStack(spacing: 8) {
+                        Text(t.nome(perParlante: voce.idParlante)).bold()
+                        Text(FormattaTempo.hhmmss(voce.durata))
+                            .monospacedDigit()
+                            .foregroundStyle(.secondary)
+                        Text("\(Int((voce.durata / totale * 100).rounded()))%")
+                            .font(.caption)
+                            .foregroundStyle(.secondary)
+                        // Barretta proporzionale alla quota di parlato.
+                        GeometryReader { geometria in
+                            Capsule()
+                                .fill(Color.accentColor.opacity(0.35))
+                                .frame(width: geometria.size.width * voce.durata / totale)
+                        }
+                        .frame(height: 6)
+                    }
+                }
+            }
+            .padding(10)
+            .frame(maxWidth: .infinity, alignment: .leading)
+            .background(.quaternary.opacity(0.4), in: RoundedRectangle(cornerRadius: 8))
         }
     }
 
