@@ -49,6 +49,27 @@ final class AudioCampioniTests: XCTestCase {
         XCTAssertLessThanOrEqual(mix[0], 1.0)
     }
 
+    func testNormalizzaPortaIlPiccoAMenoUnDecibel() {
+        let campioni: [Float] = [0.1, -0.27, 0.05]
+        let esito = AudioCampioni.normalizza(campioni)
+        XCTAssertEqual(esito.map(abs).max()!, 0.891, accuracy: 0.001)
+        // I rapporti tra campioni restano invariati.
+        XCTAssertEqual(esito[0] / esito[1], campioni[0] / campioni[1], accuracy: 0.001)
+    }
+
+    func testNormalizzaNonAmplificaIlSilenzio() {
+        XCTAssertEqual(AudioCampioni.normalizza([]), [])
+        // Sotto la soglia di rumore non si amplifica: si eviterebbe solo
+        // di sparare a fondo scala il rumore di fondo.
+        let quasiSilenzio = [Float](repeating: 0.0005, count: 100)
+        XCTAssertEqual(AudioCampioni.normalizza(quasiSilenzio), quasiSilenzio)
+    }
+
+    func testNormalizzaNonAbbassaUnSegnaleGiaPieno() {
+        let pieni: [Float] = [0.95, -0.95]
+        XCTAssertEqual(AudioCampioni.normalizza(pieni), pieni)
+    }
+
     func testScriviM4A() throws {
         let url = FileManager.default.temporaryDirectory
             .appendingPathComponent("prova-\(UUID().uuidString).m4a")

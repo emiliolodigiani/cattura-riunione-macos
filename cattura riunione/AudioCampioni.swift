@@ -77,6 +77,19 @@ nonisolated enum AudioCampioni {
         return campioni
     }
 
+    /// Riporta il picco a −1 dBFS (0.891) amplificando soltanto: un
+    /// segnale già pieno resta com'è e sotto la soglia di rumore
+    /// (−60 dBFS) non si amplifica il nulla. Le registrazioni parlate
+    /// arrivano spesso molto basse (visto −11 dBFS dal microfono
+    /// integrato) e all'ascolto risultano flebili.
+    static func normalizza(_ campioni: [Float]) -> [Float] {
+        let piccoDestinazione: Float = 0.891
+        let picco = campioni.reduce(Float(0)) { max($0, abs($1)) }
+        guard picco > 0.001, picco < piccoDestinazione else { return campioni }
+        let guadagno = piccoDestinazione / picco
+        return campioni.map { $0 * guadagno }
+    }
+
     /// Somma due tracce campione per campione (lunghezze diverse ammesse)
     /// con limitazione morbida del fondo scala.
     static func miscela(_ a: [Float], _ b: [Float]) -> [Float] {

@@ -64,6 +64,7 @@ final class MeetingRecorder {
                    let campioniSistema = try? AudioCampioni.carica(urlSistema, frequenza: 48000) {
                     mix = AudioCampioni.miscela(mix, campioniSistema)
                 }
+                mix = AudioCampioni.normalizza(mix)
                 try AudioCampioni.scriviM4A(mix, frequenza: 48000, in: destinazione)
             }.value
             pulisci(urlMicrofono, urlSistema)
