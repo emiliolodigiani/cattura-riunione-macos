@@ -6,6 +6,20 @@
 	objectVersion = 77;
 	objects = {
 
+/* Begin PBXBuildFile section */
+		A5944B2730483E0000AA722D /* FluidAudio in Frameworks */ = {isa = PBXBuildFile; productRef = CA11000000000000000000D2 /* FluidAudio */; };
+/* End PBXBuildFile section */
+
+/* Begin PBXContainerItemProxy section */
+		CA11000000000000000000C2 /* PBXContainerItemProxy */ = {
+			isa = PBXContainerItemProxy;
+			containerPortal = CA11000000000000000000A9 /* Project object */;
+			proxyType = 1;
+			remoteGlobalIDString = CA11000000000000000000A4;
+			remoteInfo = "Cattura Riunione";
+		};
+/* End PBXContainerItemProxy section */
+
 /* Begin PBXFileReference section */
 		CA11000000000000000000A3 /* Cattura Riunione.app */ = {isa = PBXFileReference; explicitFileType = wrapper.application; includeInIndex = 0; path = "Cattura Riunione.app"; sourceTree = BUILT_PRODUCTS_DIR; };
 		CA11000000000000000000B3 /* Cattura RiunioneTests.xctest */ = {isa = PBXFileReference; explicitFileType = wrapper.cfbundle; includeInIndex = 0; path = "Cattura RiunioneTests.xctest"; sourceTree = BUILT_PRODUCTS_DIR; };
@@ -42,6 +56,7 @@
 			isa = PBXFrameworksBuildPhase;
 			buildActionMask = 2147483647;
 			files = (
+				A5944B2730483E0000AA722D /* FluidAudio in Frameworks */,
 			);
 			runOnlyForDeploymentPostprocessing = 0;
 		};
@@ -216,16 +231,6 @@
 			targetProxy = CA11000000000000000000C2 /* PBXContainerItemProxy */;
 		};
 /* End PBXTargetDependency section */
-
-/* Begin PBXContainerItemProxy section */
-		CA11000000000000000000C2 /* PBXContainerItemProxy */ = {
-			isa = PBXContainerItemProxy;
-			containerPortal = CA11000000000000000000A9 /* Project object */;
-			proxyType = 1;
-			remoteGlobalIDString = CA11000000000000000000A4;
-			remoteInfo = "Cattura Riunione";
-		};
-/* End PBXContainerItemProxy section */
 
 /* Begin XCBuildConfiguration section */
 		CA11000000000000000000AB /* Debug */ = {

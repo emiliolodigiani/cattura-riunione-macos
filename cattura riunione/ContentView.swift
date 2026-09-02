@@ -243,7 +243,10 @@ struct ContentView: View {
             }
             .padding(.horizontal, 12)
         }
-        if let motore, cartellaInElaborazione != nil {
+        // Il caso .errore resta visibile anche a elaborazione conclusa
+        // (cartellaInElaborazione ormai azzerata), sennò sparirebbe
+        // prima che qualcuno possa leggerlo.
+        if let motore, cartellaInElaborazione != nil || motore.fase.èErrore {
             statoElaborazione(motore.fase)
                 .padding(.horizontal, 12)
         }

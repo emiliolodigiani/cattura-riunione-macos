@@ -24,6 +24,11 @@ final class TranscriptionEngine {
         case trascrizione(Double)
         case completato
         case errore(String)
+
+        var èErrore: Bool {
+            if case .errore = self { return true }
+            return false
+        }
     }
 
     private(set) var fase: Fase = .inattivo
@@ -62,8 +67,9 @@ final class TranscriptionEngine {
             let durata = Double(campioni.count) / 16000
 
             fase = .diarizzazione(0)
-            let risultato = try await diarizzatore.process(audio: campioni, progressCallback: avanzamentoDiarizzazione())
-            let turni = TurniParlato.consolida(risultato.segments.map(TurnoParlato.init))
+            let segmenti = try await diarizza(campioni, con: diarizzatore,
+                                              avanzamento: avanzamentoDiarizzazione())
+            let turni = TurniParlato.consolida(segmenti)
 
             let interventi = try await trascriviTurni(turni, con: asr) { _ in campioni }
             return concludi(interventi: interventi, durata: durata)
@@ -98,15 +104,11 @@ final class TranscriptionEngine {
 
             fase = .diarizzazione(0)
             // Le due tracce si spartiscono la barra: 0…0,5 e 0,5…1.
-            let esitoMic = try await diarizzatore.process(
-                audio: campioniMic, progressCallback: avanzamentoDiarizzazione(da: 0, a: 0.5)
-            )
-            let esitoSistema = try await diarizzatore.process(
-                audio: campioniSistema, progressCallback: avanzamentoDiarizzazione(da: 0.5, a: 1)
-            )
             let turni = TurniParlato.unisci(
-                microfono: esitoMic.segments.map(TurnoParlato.init),
-                sistema: esitoSistema.segments.map(TurnoParlato.init)
+                microfono: try await diarizza(campioniMic, con: diarizzatore,
+                                              avanzamento: avanzamentoDiarizzazione(da: 0, a: 0.5)),
+                sistema: try await diarizza(campioniSistema, con: diarizzatore,
+                                            avanzamento: avanzamentoDiarizzazione(da: 0.5, a: 1))
             )
 
             let interventi = try await trascriviTurni(turni, con: asr) { turno in
@@ -116,6 +118,22 @@ final class TranscriptionEngine {
         } catch {
             fase = .errore("Trascrizione non riuscita: \(error.localizedDescription)")
             return nil
+        }
+    }
+
+    /// Diarizza una traccia. La pipeline offline tratta l'assenza di
+    /// parlato come un errore: per noi è una traccia senza turni
+    /// (musica, silenzio), non un fallimento della trascrizione.
+    private func diarizza(
+        _ campioni: [Float],
+        con diarizzatore: OfflineDiarizerManager,
+        avanzamento: @escaping @Sendable (Int, Int) -> Void
+    ) async throws -> [TurnoParlato] {
+        do {
+            let esito = try await diarizzatore.process(audio: campioni, progressCallback: avanzamento)
+            return esito.segments.map(TurnoParlato.init)
+        } catch OfflineDiarizationError.noSpeechDetected {
+            return []
         }
     }
 
