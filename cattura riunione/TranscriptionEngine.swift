@@ -87,6 +87,13 @@ final class TranscriptionEngine {
                 (try AudioCampioni.carica(urlMic, frequenza: 16000),
                  try AudioCampioni.carica(urlSistema, frequenza: 16000))
             }.value
+            // Una traccia vuota (registrazioni vecchie o degeneri) manda
+            // in errore i modelli: meglio ripiegare sul mix.
+            if campioniMic.isEmpty || campioniSistema.isEmpty {
+                let mix = urlMic.deletingLastPathComponent()
+                    .appendingPathComponent(MeetingStore.nomeAudio)
+                return await trascrivi(audio: mix)
+            }
             let durata = Double(max(campioniMic.count, campioniSistema.count)) / 16000
 
             fase = .diarizzazione(0)

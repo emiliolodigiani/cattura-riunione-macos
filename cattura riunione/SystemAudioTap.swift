@@ -108,11 +108,37 @@ final class SystemAudioTap {
         return url!
     }
 
+    /// L'oggetto Core Audio del nostro processo, da escludere dal tap:
+    /// il riascolto di una riunione dentro l'app non deve rientrare
+    /// nella cattura.
+    private func oggettoProcessoCorrente() -> AudioObjectID? {
+        var pid = pid_t(ProcessInfo.processInfo.processIdentifier)
+        var indirizzo = AudioObjectPropertyAddress(
+            mSelector: kAudioHardwarePropertyTranslatePIDToProcessObject,
+            mScope: kAudioObjectPropertyScopeGlobal,
+            mElement: kAudioObjectPropertyElementMain
+        )
+        var oggetto = AudioObjectID(kAudioObjectUnknown)
+        var dimensione = UInt32(MemoryLayout<AudioObjectID>.size)
+        let stato = withUnsafeMutablePointer(to: &pid) { pidPtr in
+            AudioObjectGetPropertyData(
+                AudioObjectID(kAudioObjectSystemObject), &indirizzo,
+                UInt32(MemoryLayout<pid_t>.size), pidPtr, &dimensione, &oggetto
+            )
+        }
+        guard stato == noErr, oggetto != kAudioObjectUnknown else { return nil }
+        return oggetto
+    }
+
     private func configura(conFile: Bool) throws {
         ferma()
 
-        // 1. Tap globale: mixdown stereo di tutti i processi.
-        let descrizione = CATapDescription(stereoMixdownOfProcesses: [])
+        // 1. Tap globale su TUTTI i processi (tranne il nostro): è il
+        //    costruttore "global tap but exclude"; quello "mixdown of
+        //    processes" vuole l'elenco dei processi da includere e con
+        //    un elenco vuoto catturerebbe solo silenzio.
+        let esclusioni = [oggettoProcessoCorrente()].compactMap { $0 }
+        let descrizione = CATapDescription(stereoGlobalTapButExcludeProcesses: esclusioni)
         descrizione.isPrivate = true
         var nuovoTap = AudioObjectID(kAudioObjectUnknown)
         var stato = AudioHardwareCreateProcessTap(descrizione, &nuovoTap)

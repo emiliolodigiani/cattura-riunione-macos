@@ -150,8 +150,10 @@ final class MeetingRecorder {
                 )
 
                 // Con due tracce vere si salvano anche i singoli, ciascuno
-                // normalizzato: alimentano la diarizzazione separata.
-                if let mic = campioniMic, let sistema = campioniSistema {
+                // normalizzato: alimentano la diarizzazione separata. Una
+                // traccia senza campioni non è "vera": inutile ai modelli.
+                if let mic = campioniMic, let sistema = campioniSistema,
+                   !mic.isEmpty, !sistema.isEmpty {
                     try AudioCampioni.scriviM4A(
                         AudioCampioni.normalizza(mic), frequenza: 48000,
                         in: cartella.appendingPathComponent(MeetingStore.nomeAudioMicrofono)
