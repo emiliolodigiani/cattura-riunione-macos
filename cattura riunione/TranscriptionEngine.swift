@@ -152,6 +152,20 @@ final class TranscriptionEngine {
         }
     }
 
+    /// Margine attorno al ritaglio di un turno: i confini della
+    /// diarizzazione cadono spesso a metà parola, un po' di respiro
+    /// evita di decapitarle.
+    private nonisolated static let margineRitaglio = 0.3
+
+    /// Intervallo di campioni di un turno, col margine, entro la traccia.
+    nonisolated static func intervalloRitaglio(
+        _ turno: TurnoParlato, campioniTotali: Int
+    ) -> Range<Int> {
+        let da = max(0, Int((turno.inizio - margineRitaglio) * 16000))
+        let a = min(campioniTotali, Int((turno.fine + margineRitaglio) * 16000))
+        return da..<max(da, a)
+    }
+
     /// Trascrive ogni turno ritagliandolo dalla traccia che gli compete.
     private func trascriviTurni(
         _ turni: [TurnoParlato],
@@ -163,13 +177,16 @@ final class TranscriptionEngine {
         for (indice, turno) in turni.enumerated() {
             fase = .trascrizione(Double(indice) / Double(max(1, turni.count)))
             let sorgente = campioni(turno)
-            let da = max(0, Int(turno.inizio * 16000))
-            let a = min(sorgente.count, Int(turno.fine * 16000))
-            guard a > da else { continue }
-            let ritaglio = Array(sorgente[da..<a])
+            let intervallo = Self.intervalloRitaglio(turno, campioniTotali: sorgente.count)
+            guard !intervallo.isEmpty else { continue }
+            let ritaglio = Array(sorgente[intervallo])
             // Ogni turno è un ritaglio indipendente: stato del decoder nuovo.
+            // L'hint di lingua filtra i token per alfabeto (niente derive
+            // cirilliche/greche sui segmenti deboli); italiano e inglese
+            // condividono l'alfabeto, quindi non distingue quelli.
             var statoDecoder = TdtDecoderState.make(decoderLayers: stratiDecoder)
-            let esito = try await asr.transcribe(ritaglio, decoderState: &statoDecoder)
+            let esito = try await asr.transcribe(ritaglio, decoderState: &statoDecoder,
+                                                 language: .italian)
             let testo = esito.text.trimmingCharacters(in: .whitespacesAndNewlines)
             guard !testo.isEmpty else { continue }
             interventi.append(Intervento(
