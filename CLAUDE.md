@@ -47,6 +47,13 @@ xcodebuild -project "cattura riunione.xcodeproj" -scheme "Cattura Riunione" \
 # test unitari
 xcodebuild -project "cattura riunione.xcodeproj" -scheme "Cattura Riunione" \
   -destination 'platform=macOS' -derivedDataPath build test
+
+# build Release da riga di comando: serve ARCHS=arm64 globale, perché i
+# pacchetti Swift in Release compilano universali con le PROPRIE
+# impostazioni e FluidAudio usa Float16, che su x86_64 non esiste.
+xcodebuild -project "cattura riunione.xcodeproj" -scheme "Cattura Riunione" \
+  -configuration Release -destination 'platform=macOS,arch=arm64' \
+  -derivedDataPath build ARCHS=arm64 build
 ```
 
 Il progetto deve sempre restare apribile e compilabile da Xcode: niente
