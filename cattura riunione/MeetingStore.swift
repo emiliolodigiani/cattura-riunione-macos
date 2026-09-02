@@ -27,7 +27,14 @@ nonisolated enum MeetingStore {
     static let nomeAudioMicrofono = "microfono.m4a"
     static let nomeAudioSistema = "sistema.m4a"
     static let nomeTrascrizione = "trascrizione.json"
-    static let nomeVerbale = "verbale.md"
+    /// Il verbale porta il nome della riunione nel nome del file
+    /// («Nome - verbale.md»): copiato fuori dalla cartella resta
+    /// riconoscibile.
+    static let suffissoVerbale = " - verbale.md"
+
+    static func urlVerbale(in cartella: URL) -> URL {
+        cartella.appendingPathComponent(cartella.lastPathComponent + suffissoVerbale)
+    }
 
     enum Errore: LocalizedError {
         case nomeNonValido
@@ -91,13 +98,23 @@ nonisolated enum MeetingStore {
     }
 
     static func salvaVerbale(_ trascrizione: Trascrizione, in cartella: URL) throws {
+        let destinazione = urlVerbale(in: cartella)
+        // Via i verbali con nomi superati: quello della cartella prima
+        // di una rinomina e il "verbale.md" del formato vecchio.
+        let contenuto = (try? FileManager.default.contentsOfDirectory(atPath: cartella.path)) ?? []
+        for nome in contenuto
+        where (nome.hasSuffix(suffissoVerbale) || nome == "verbale.md")
+            && nome != destinazione.lastPathComponent {
+            try? FileManager.default.removeItem(at: cartella.appendingPathComponent(nome))
+        }
+
         let info = try? FileManager.default.attributesOfItem(atPath: cartella.path)
         let data = info?[.creationDate] as? Date ?? Date()
         let markdown = VerbaleMarkdown.esporta(
             trascrizione, titolo: cartella.lastPathComponent, data: data
         )
         try markdown.data(using: .utf8)!
-            .write(to: cartella.appendingPathComponent(nomeVerbale), options: .atomic)
+            .write(to: destinazione, options: .atomic)
     }
 
     /// Rinomina la cartella della riunione e rigenera il verbale (il cui

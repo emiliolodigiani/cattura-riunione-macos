@@ -20,7 +20,8 @@ scaricamento dei modelli (~1 GB da Hugging Face) non serve la rete.
    parlanti, riascolto sincronizzato, esportazione Markdown.
 
 Ogni riunione è una cartella `Riunione AAAA-MM-GG HH.mm` nella cartella
-di destinazione, con `riunione.m4a`, `trascrizione.json`, `verbale.md`.
+di destinazione, con `riunione.m4a`, `trascrizione.json` e il verbale
+`Nome riunione - verbale.md`, riconoscibile anche copiato altrove.
 
 ## Sviluppo
 

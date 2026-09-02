@@ -60,8 +60,11 @@ final class MeetingStoreTests: XCTestCase {
         try MeetingStore.salva(trascrizione, in: cartella)
         let riletta = MeetingStore.caricaTrascrizione(da: cartella)
         XCTAssertEqual(riletta, trascrizione)
-        // salva() rigenera anche il verbale.md.
-        let verbale = cartella.appendingPathComponent("verbale.md")
+        // salva() rigenera anche il verbale, col nome della riunione nel
+        // nome del file: copiato altrove resta riconoscibile.
+        let verbale = cartella.appendingPathComponent(
+            "\(cartella.lastPathComponent) - verbale.md"
+        )
         XCTAssertTrue(FileManager.default.fileExists(atPath: verbale.path))
     }
 
@@ -73,10 +76,16 @@ final class MeetingStoreTests: XCTestCase {
         XCTAssertEqual(nuova.lastPathComponent, "Riunione col cliente")
         XCTAssertFalse(FileManager.default.fileExists(atPath: cartella.path))
         // La trascrizione resta leggibile e il verbale viene rigenerato
-        // col nuovo titolo.
+        // con nuovo nome file e nuovo titolo; quello vecchio sparisce.
         XCTAssertEqual(MeetingStore.caricaTrascrizione(da: nuova), trascrizione)
-        let verbale = try String(contentsOf: nuova.appendingPathComponent("verbale.md"), encoding: .utf8)
+        let verbale = try String(
+            contentsOf: nuova.appendingPathComponent("Riunione col cliente - verbale.md"),
+            encoding: .utf8
+        )
         XCTAssertTrue(verbale.hasPrefix("# Riunione col cliente\n"))
+        let residui = try FileManager.default.contentsOfDirectory(atPath: nuova.path)
+            .filter { $0.hasSuffix("- verbale.md") || $0 == "verbale.md" }
+        XCTAssertEqual(residui, ["Riunione col cliente - verbale.md"])
     }
 
     func testRinominaRifiutaNomeVuotoOGiaUsato() throws {

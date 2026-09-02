@@ -75,7 +75,8 @@ cattura brano.
   l'assenza di rete.
 - I file grezzi della registrazione (CAF temporanei) si eliminano a fine
   elaborazione. Nella cartella della riunione restano `riunione.m4a`
-  (mix per riascolto/esportazione), `trascrizione.json`, `verbale.md` e,
+  (mix per riascolto/esportazione), `trascrizione.json`, il verbale
+  «Nome riunione - verbale.md» (il nome segue le rinomine) e,
   per le registrazioni doppie (microfono + audio di sistema), anche
   `microfono.m4a` e `sistema.m4a`: alimentano la diarizzazione separata
   per traccia, molto più affidabile di quella sul mix.

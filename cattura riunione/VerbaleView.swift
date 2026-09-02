@@ -149,8 +149,6 @@ struct VerbaleView: View {
 
     private func esporta(_ t: Trascrizione) {
         try? MeetingStore.salvaVerbale(t, in: cartella)
-        NSWorkspace.shared.activateFileViewerSelecting(
-            [cartella.appendingPathComponent(MeetingStore.nomeVerbale)]
-        )
+        NSWorkspace.shared.activateFileViewerSelecting([MeetingStore.urlVerbale(in: cartella)])
     }
 }
