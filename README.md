@@ -43,14 +43,18 @@ dell'app e per qualsiasi danno o conseguenza derivante dal suo uso.
 
 ## Licenza
 
-Distribuita con licenza [MIT](LICENSE): il software è fornito «così
-com'è», **senza garanzie di alcun tipo**, espresse o implicite, e l'uso
-è a esclusivo rischio di chi lo utilizza.
+© 2026 Emilio Lodigiani. Distribuita con licenza
+[GNU GPL v3](LICENSE): software libero — chiunque può usarlo,
+studiarlo, modificarlo e ridistribuirlo, ma le versioni ridistribuite
+devono restare libere sotto la stessa licenza, sorgenti compresi. Il
+software è fornito «così com'è», **senza garanzie di alcun tipo**,
+espresse o implicite, e l'uso è a esclusivo rischio di chi lo utilizza.
 
 Trascrizione e diarizzazione usano
 [FluidAudio](https://github.com/FluidInference/FluidAudio)
-(licenza Apache 2.0); i relativi modelli si scaricano da Hugging Face
-al primo uso, con le condizioni delle rispettive schede.
+(licenza Apache 2.0, compatibile con la GPL v3); i relativi modelli si
+scaricano da Hugging Face al primo uso, con le condizioni delle
+rispettive schede.
 
 ## Sviluppo
 
