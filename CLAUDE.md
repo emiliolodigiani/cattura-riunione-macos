@@ -58,7 +58,14 @@ xcodebuild -project "cattura riunione.xcodeproj" -scheme "Cattura Riunione" \
 ```
 
 L'archivio per la distribuzione si crea da Xcode: Product > Archive,
-poi Organizer per la notarizzazione, come in cattura brano.
+poi Organizer per la notarizzazione, come in cattura brano. La build
+notarizzata («Export Notarized App» dall'Organizer) si pubblica su
+GitHub (repo `cattura-riunione-macos`) con:
+
+```sh
+scripts/pubblica-release.sh "/percorso/di/Cattura Riunione.app"
+# --prova per vedere cosa farebbe senza pubblicare
+```
 
 Il progetto deve sempre restare apribile e compilabile da Xcode: niente
 generatori esterni, il `.pbxproj` si scrive a mano partendo da quello di
