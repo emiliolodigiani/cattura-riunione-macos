@@ -6,11 +6,12 @@
 #      scripts/pubblica-release.sh [--prova] "/percorso/di/Cattura Riunione 1.0.35.dmg"
 #
 # Con una .app (di solito l'esportazione dell'Organizer con "Export
-# Notarized App") verifica il sigillo di notarizzazione e la comprime
-# in uno zip; con un .dmg o .zip già pronti carica quelli. Il numero di
-# versione viene dall'Info.plist (o dal nome del file per dmg/zip) e
-# diventa l'etichetta della release: v1.0.35. Con --prova prepara tutto
-# ma mostra soltanto i comandi di pubblicazione senza eseguirli.
+# Notarized App") verifica il sigillo di notarizzazione e confeziona il
+# DMG con scripts/crea-dmg.sh; con un .dmg o .zip già pronti carica
+# quelli. Il numero di versione viene dall'Info.plist (o dal nome del
+# file per dmg/zip) e diventa l'etichetta della release: v1.0.36. Con
+# --prova prepara tutto ma mostra soltanto i comandi di pubblicazione
+# senza eseguirli.
 #
 set -euo pipefail
 
@@ -36,12 +37,10 @@ case "$ART" in
     fi
     echo "Sigillo di notarizzazione verificato."
     VERSIONE="$(/usr/libexec/PlistBuddy -c 'Print :CFBundleShortVersionString' "$ART/Contents/Info.plist")"
-    # Lo zip con ditto preserva firma e metadati; il nome senza spazi
+    # Il DMG porta con sé l'app col sigillo; il nome senza spazi
     # perché GitHub li sostituirebbe con dei punti.
-    ASSET="$(dirname "$ART")/Cattura-Riunione-$VERSIONE.zip"
-    rm -f "$ASSET"
-    ditto -c -k --sequesterRsrc --keepParent "$ART" "$ASSET"
-    echo "Creato: $ASSET"
+    ASSET="$(dirname "$ART")/Cattura-Riunione-$VERSIONE.dmg"
+    scripts/crea-dmg.sh "$ART" "$ASSET"
     ;;
 
   *.dmg|*.zip)
