@@ -23,6 +23,35 @@ Ogni riunione è una cartella `Riunione AAAA-MM-GG HH.mm` nella cartella
 di destinazione, con `riunione.m4a`, `trascrizione.json` e il verbale
 `Nome riunione - verbale.md`, riconoscibile anche copiato altrove.
 
+## Installazione
+
+Il DMG notarizzato è nella pagina delle
+[Release](https://github.com/emiliolodigiani/cattura-riunione-macos/releases):
+aprirlo e trascinare l'app in Applicazioni. Requisiti: macOS 14 o
+successivo (audio di sistema da 14.2), Mac con Apple Silicon.
+
+## Uso responsabile
+
+Usa l'app **sempre nel rispetto della legge**. Le norme su registrazioni,
+privacy e consenso cambiano da paese a paese: informati e rispettale.
+In particolare **non registrare persone che non sanno di essere
+registrate**: avvisa sempre i partecipanti alla riunione e ottieni il
+loro consenso prima di avviare la registrazione.
+
+L'autore **declina ogni responsabilità** per usi impropri o illeciti
+dell'app e per qualsiasi danno o conseguenza derivante dal suo uso.
+
+## Licenza
+
+Distribuita con licenza [MIT](LICENSE): il software è fornito «così
+com'è», **senza garanzie di alcun tipo**, espresse o implicite, e l'uso
+è a esclusivo rischio di chi lo utilizza.
+
+Trascrizione e diarizzazione usano
+[FluidAudio](https://github.com/FluidInference/FluidAudio)
+(licenza Apache 2.0); i relativi modelli si scaricano da Hugging Face
+al primo uso, con le condizioni delle rispettive schede.
+
 ## Sviluppo
 
 Progetto Xcode standard: `cattura riunione.xcodeproj`, schema
